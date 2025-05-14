@@ -1,0 +1,25 @@
+1.- docker info 2>/dev/null | grep Version | head -1 
+2.- We can download what we might think we need: Python, and then a known small image: alpine Linux, and then compare the sizes: 
+  + docker pull python 
+  + docker pull alpine
+  + docker images | tr -s ' ' | grep -E python\|alpine | cut -d' ' -f1,7 
+  + So to save disk space, remove the Python image: 
+  + docker rmi python:latest 
+  + So we'll start FROM alpine in the Dockerfile. 
+  + Execute a Linux command from git-bash: 
+    - docker run -dit --name myalpine_cont_ alpine:latest
+    - winpty docker exec -t myalpine_cont_ ls //etc/
+  + Get the version of Alpine:
+    - winpty docker exec -t myalpine_cont_ cat //etc/alpine-release
+  + Try to run Python: winpty docker exec -t myalpine_cont_ python3 --version
+  + Install Python: apk add python3 
+  + Now add it to the Dockerfile: RUN apk add python3 
+3.- Copy the script over to the image/container: COPY script.py /root/script.py 
+  + Execute the script: ENTRYPOINT ["python3", "/root/script.py"]
+4.- Build the image: docker build . -t get_time_alpine_python3 
+  + Run it: winpty docker run get_time_alpine_python3
+5.- Go to AWS/ECR, a private repo, click on "View push commands" and copy-paste the commands. 
+6.- docker rm f6
+  + docker rm myalpine_cont_ 
+
+

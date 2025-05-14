@@ -1,0 +1,58 @@
+* What are image, container: 
+	+ Image: Read-only template to create containers. Steps detailed on Dockerfile. 
+	+ Container: Running instance of an image. 
+
+* Difference between RUN and CMD: 
+	+ RUN: During the build process, usually to install SW. 
+	+ CMD: Execute when the container starts. 
+
+* What to do if the image is too large: 
+	+ Switch to alpine Linux. 
+
+* What do we use Compose for: 
+	+ To run multiple containers together with a single config file. 
+
+* A real-world scenario: 
+	+ Run web app locally exactly like it runs on the server. 
+
+* What is a Docker registry: 
+	+ Where images are pushed to. Contains repositories that are meant for a single image and its versions (tags). 
+
+* Default networks: 
+	+ Bridge: for isolated containers. 
+	+ Host: shares host netw. 
+
+* How to persistent storage: 
+	+ Volumes store data that remain even if container is removed. 
+
+
+* Commands: 
+	+ View running containers: 					docker ps 
+	+ Even those stopped: 					docker ps -a 
+	+ Run a container and give it a name: 				docker run --name <NAME> <IMAGE> 
+	+ Delete a container: 					docker rm <FIRST_ID_LETTERS> 
+	+ Delete an image: 						docker rmi <REPO>:<TAG> 
+	+ Troubleshoot: 						docker logs <NAME> 
+	+ Pass an env var: 						docker run --env VAR_NAME=<VAL> <IMAGE> 
+	+ Get docker version if running: 				docker info 2>/dev/null | grep Version | head -1 
+	+ Get latest Alpine image: 					docker pull alpine 
+	+ See the size of Python images: 				docker images | tr -s ' ' | grep python | cut -d' ' -f1,7 
+	+ Run Linux container and keep alive:				docker run -dit --name myalpine_cont_ alpine:latest 
+	+ Execute a command in it (Win git-bash): 			winpty docker exec -t myalpine_cont_ ls //etc/ 
+	+ Build an image from a container: 				docker build . -t test_img 
+	+ Push it to a private registry (+ tag, authenticate): 		docker build -t <USER>/<REPO>:01 && docker login && docker push <IMAGE> 
+	+ Push it to ECR: 						# Copy-paste commands from "View push commands". 
+
+
+
+* Dockerfile: 
+	+ Run a task, return result, exit:
+		FROM alpine:latest 
+		RUN apk add python3 
+		COPY script.py /root/script.py 
+		ENTRYPOINT ["python3", "/root/script.py"]
+	+ Long-running service: 
+		
+
+
+

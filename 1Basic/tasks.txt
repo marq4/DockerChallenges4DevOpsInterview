@@ -1,0 +1,8 @@
+Tasks: 
+1.- Get the version of the running Docker. 
+2.- Create a Docker image that does not exceed 500M size that contains Python. 
+3.- Write a Python script that returns the current time. 
+4.- Execute the Docker container to get the time. 
+5.- Upload the image to ECR. 
+6.- Delete the containers that ran to give the time. 
+
