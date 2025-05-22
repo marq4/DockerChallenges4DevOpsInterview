@@ -1,0 +1,40 @@
+---
+services:
+  vote:
+    build: example-voting-app/vote/
+    ports:
+      - 5000:80
+    networks:
+      - front-end
+      - back-end
+  redis:
+    image: redis
+    networks:
+      - back-end
+  worker:
+    build: example-voting-app/worker/
+    networks:
+      - back-end
+  db:
+    image: postgres:latest
+    networks:
+      - back-end
+    environment:
+      POSTGRES_PASSWORD: postgres
+  result:
+    build: example-voting-app/result/
+    ports:
+      - 5001:80
+    networks:
+      - front-end
+      - back-end
+    depends_on:
+      - db
+
+networks:
+  front-end:
+  back-end:
+
+
+
+

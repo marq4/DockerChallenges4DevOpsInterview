@@ -1,0 +1,6 @@
+Tasks: 
+1.- Clone this distributed containerized app: https://github.com/dockersamples/example-voting-app 
+2.- Write a Docker Compose document to run/build the required images. Define the following networking layout: 
+	+ Front end netw for voting and result UIs. 
+	+ Everything connected to back end netw. 
+3.- Test the voting app. 

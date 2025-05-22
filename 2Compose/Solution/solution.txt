@@ -1,0 +1,10 @@
+Solution:
+* Start Docker Desktop. 
+1: git clone https://github.com/dockersamples/example-voting-app 
+2: docker-compose.yml 
+3: 
+  + docker-compose build 
+  + docker-compose up
+4: Go to http://localhost:5000/ in browser, vote, then go to http://localhost:5001/ 
+* docker-compose rm 
+
