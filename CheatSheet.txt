@@ -19,11 +19,25 @@
 	+ Where images are pushed to. Contains repositories that are meant for a single image and its versions (tags). 
 
 * Default networks: 
-	+ Bridge: for isolated containers. 
-	+ Host: shares host netw. 
+	+ Bridge: for isolated containers. Private, internal, 172.17.X.X. 
+	+ Host: shares host netw. No isolation. 				--network host 
+	+ None. 
 
-* How to persistent storage: 
+* How to persistent storage (e.g. DB): 
 	+ Volumes store data that remain even if container is removed. 
+	+ $ `docker run -v new_volume` auto creates the volume. 
+	+ For already existing data (e.g. db): --mount. 
+* Where are containers, images and volumes stored on the Linux host's fs: 
+	+ /var/lib/docker: 
+		- /containers. 
+		- /image. 
+		- /volumes. 
+
+* Layered architecture:
+	+ Each line in Dockerfile -> layer. 
+	+ Image layers are read-only after build is complete. 
+	+ Top (container) layer is rw but is ephemeral. 
+
 
 * ENTRYPOINT VS CMD: 
 	+ CMD: command will get replaced by CLI arguments passed. Also can be used as default value for ENTRYPOINT. 
@@ -33,6 +47,77 @@
 	+ Original (v1): archaic. 
 	+ Version "2": No "links" required as all containers are auto attached to dedicated bridge netw. Supports depends_on. 
 	+ Version "3": Support for Swarm. %%%STACKS 
+
+* Docker Engine:
+	+ CLI. 
+	+ REST API. 
+	+ Daemon. 
+
+* Containerization: 
+	+ Docker uses namespaces to isolate workspace: 
+		- Process ID: root process = 1. Child system's processes are actually running on the host as e.g. #6 -> #1 (nginx) inside container. 
+		- Unix Timesharing. 
+		- Mount. 
+		- InterProcess. 
+		- Network. 
+	+ Restrict resources that a container can use: cgroups. 		--cpus=0.5, --memory=100m 	// 50% CPU. 
+		- No restriction by default. 
+
+* Can I modify the SW baked into the image from a container, to test changes? 
+	+ YES. The app file will be copied automatically by Docker (copy-on-write) to the (top) container layer: RW. 
+		However we need to be careful because if the container is stopped or fails these changes are lost. 
+
+* What about DNS: 
+	+ Embedded DNS: Containers can reach each other using their names, which is better than using internal IPs. 
+	+ Docker has a built-in DNS server @ 127.0.0.11. 
+
+* Pull a public image using full path: 
+	+ docker pull docker.io/library/nginx 
+		Registry ^      ^ User/account 		Image/Repo 
+
+* Container Orchestration solutions: 
+	+ Swarm: Docker hosts: 1 Manager + Workers. 
+	+ K8: Cluster: set of nodes. Node: virtual or physical machine, worker machine. Master: Control Plane. Components: API Server, etcd, kubelet, Container Runtime, Controller, Scheduler. CLI: kubectl. 
+	+ MESOS. 
+
+* What is "Docker Engine": 
+	+ Host with Docker installed on it: 
+		- CLI: can be remote -H=remote-server:2375. 
+		- Rest API: to talk to the daemon. 
+		- Daemon: manages Docker objects: images, containers, volumes, networks. 
+
+* Storage drivers: 
+	+ AUFS: diff, layers, mnt.  
+	+ ZFS. 
+	+ BTRFS. 
+	+ Device Mapper. 
+	+ Overlay. 
+	+ Overlay2. 
+
+
+* SWARM: in PROD we need mutiple hosts to avoid single point of failure. 
+	+ Manager nodes: 
+		- Can also perform "work" but not recommended in PROD. 
+		- Master where the swarm cluster is initiated. 
+		- Maintains cluster state. 
+		- Adding/removing workers. 
+		- Creating, distrubting, and maintaining container & service state. 
+		- Leader: makes decisions but must be agreed upon by a majority of managers. 
+			' Problem of Distrubuted Consensus: ensure all managers have the same info about the cluster at all times. 
+			' Solved: RAFT algo: decides who is Leader. Random timers go off, the first manager to reach 0:00 sends request to other managers to be the Leader. Other managers vote. Now Leader sends notifications at regular intervals to reafirm its leadership. If no notifications are received after some time a new Leader is elected. 
+			' When a new service will start or new worker will be added to cluster, Leader notifies other managers. If at least 1 respons (Meet Quorum), the changes are commited to RAFT DB on all manager nodes. 
+			' Quorum: min # of members that must be present to make decisions valid. Formula: (Managers + 1) / 2. 
+			' No more than 7 managers recommended. 
+			' Fault Tolerance: (Managers - 1) / 2. 
+			' Recommended: odd #: 3 | 5. 			// In case of netw segmentation. 
+	+ Cluster Failure (2 managers fail out of 3 at the same time): workers continue to work but no new workers can be added to cluster. 
+
+* Services: one or more instances of an app or service that runs in a swarm cluster. 
+	+ Create service: Orchestrator on Manager Node decides how many Tasks to create. -> Scheduler schedules that many Tasks on each worker node. 
+	+ Task: process that starts the container. Updates status to Manager. 
+	+ Types: replicated | global: one instance on each node. 
+	+ Name: --name web => web.1, web.2. 
+
 
 
 
@@ -55,6 +140,25 @@
 	+ Push it to ECR: 						# Copy-paste commands from "View push commands". 
 	+ Build images specified with "build" on YAML: 			docker-compose build 
 	+ Run multiple containers dettached: 				docker-compose up -d 
+	+ Take a look at a layer's size: 				docker history 
+	+ Create a volume for persistent storage: 			docker run --volume db_data:/var/lib/mysql mysql  				# Volume-mounting. 
+	+ Mount and share existing dir on host: 				docker run --mount type=bind,source=/shared,target=/var/lib/mysql mysql 		# Bind-mounting. 
+	+ Create custom bridge network: 				docker network create --driver bridge --subnet 182.18.0.0/16 my-custom-isolated-netw 
+	+ Deploy private registry, upload image:				docker run -d -p 5000:5000 --restart=always --name my-registry registry:2 && docker image tag my-img localhost:5000/my-img && docker push localhost:5000/my-img && curl -X GET localhost:5000/v2/_catalog 		// We need to have a registry server running (container). 
+	+ Initialize Swarm manager: 					docker swarm init 
+	+ Get command to add worker to swarm cluster: 			docker swarm join-token worker 
+	+ Initialize worker node: 					docker swarm join --token <TOKEN> 
+	+ Join as another manager: 					docker swarm join-token manager 
+	+ See nodes in swarm cluster: 				docker node ls 
+	+ Remove worker from swarm cluster: 				docker swarm leave ;;;;;; docker node rm <WORKER_NAME> 
+	+ Run app in multiple instances in swarm cluster: 			docker service create --replicas 3 my-web-server		// On manager node. 
+	+ Check which storage driver is being used: 			docker info | grep Driver 
+	+ Check amount disk space used by Docker, per image (shared):	docker system df -v 
+	+ Promote a worker to manager: 				docker node promote <NODE_NAME> 			// On manager node. 
+	+ Force-recover cluster with a single manager: 			docker swarm init --force-new-cluster 			// No managerial activities allowed. 
+	+ Create a replicated service to run accross workers: 		docker service create --replicas 3 <IMAGE> 		// On manager node. 
+	+ Create a global service: 					docker service create --mode global <IMAGE> 		// On manager node. 
+	+ Increase to one more replica: 				docker service update --replicas 4 <IMAGE> 		// On manager node. 
 
 
 
@@ -76,10 +180,12 @@
 		CMD ["nginx", "-g", "daemon off;"]
 
 
+
 * Compose:
 	+ Click counter: 
 		- First cd into the project subdir. 
 		---
+		version: "2"
 		services:
 		  redis:
 		    image: redis:alpine
@@ -90,6 +196,7 @@
 	+ Voting app:
 		- First cd into the project subdir. 
 		---
+		version: "2"
 		services:
 		  redis:
 		    image: redis
@@ -114,4 +221,3 @@
 		networks:
 		  front-end:
 		  back-end: 
-
