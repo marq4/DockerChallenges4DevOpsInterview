@@ -15,8 +15,13 @@
 * A real-world scenario: 
 	+ Run web app locally exactly like it runs on the server. 
 
-* What is a Docker registry: 
-	+ Where images are pushed to. Contains repositories that are meant for a single image and its versions (tags). 
+* What is Docker Registry: 
+	+ Where images are pushed to by default. Contains repositories that are meant for a single image and its versions (tags). 
+
+* Local Registry: 
+	+ Run image of local registry server: docker run -p 5000:5000 registry:2 
+	+ Build my image: docker build . -t user/my-app 
+	+ Push: docker push localhost:5000/user/my-app 
 
 * Default networks: 
 	+ Bridge: for isolated containers. Private, internal, 172.17.X.X. 
@@ -39,14 +44,14 @@
 	+ Top (container) layer is rw but is ephemeral. 
 
 
-* ENTRYPOINT VS CMD: 
+* ENTRYPOINT vs CMD: 
 	+ CMD: command will get replaced by CLI arguments passed. Also can be used as default value for ENTRYPOINT. 
 	+ ENTRYPOINT: CLI arguments will be appended to the entrypoint. Can be overriden with --entrypoint. 
 
 * Compose versions:
 	+ Original (v1): archaic. 
 	+ Version "2": No "links" required as all containers are auto attached to dedicated bridge netw. Supports depends_on. 
-	+ Version "3": Support for Swarm. %%%STACKS 
+	+ Version "3": Support for Swarm and Stacks. 
 
 * Docker Engine:
 	+ CLI. 
@@ -118,6 +123,71 @@
 	+ Types: replicated | global: one instance on each node. 
 	+ Name: --name web => web.1, web.2. 
 
+* Swarm Networking: 
+	+ Overlay: internal private network that spans accross nodes in a cluster. 
+	+ Ingress: auto created with the cluster, built-in LB. It's a type of Overlay netw, creates a Routing Mesh. 
+
+* Stack: group of inter-related services that together form an entire app. 
+
+
+
+
+
+* CI/CD: 
+	+ Each project has a Dockerfile checked-into the code repo along with the rest of the code. -> 
+	+ Jenkins pulls code, uses Dockerfile to build image via Docker Plugin, tags image. -> 
+	+ Image is used to run tests. -> 
+	+ Pushed to Registry (internal or DockerHub) -> 
+	+ AWS ECS.  
+
+
+
+* CLOUD: 
+	+ Docker Cloud: 
+		- Log on to portal. 
+		- Create a stack: Stackfile (YAML). 
+		- Auto: hosts, docker engine, swarm, netw, services, runss containers. 
+		- Infra: external cloud provider: AWS, Azure, Digital Ocean. 
+		- Source providers: GitHub, BitBucket. 
+		- CICD support. 
+		- Swarm mode. 
+
+
+
+* Kubernetes (K8): 
+	+ Container Orchestration provides a framework for integrating and managing a large # of containers. 
+	+ VS Swarm:
+		- Kube Master node + mutiple worker nodes. 
+		- Containers are wrapped inside a virtual block: pods. Pod: smallest, simplest unit. Unit of deployment. 
+		- A single Pod can have multiple containers within it, usually not of the same type. 
+		- IP address is assigned to a Pod. 
+		- Containers inside a Pod share the same storage volumes. 
+		- App is scaled at the Pod level. 
+		- A Deployment: creates a Replica Set to create multiple instances of pods. 
+		- Replica Sets ensure specified # of pod instances are running. 
+		- Services: enable communication between pods and external access to app. 
+			' Internal: ClusterIP. 
+			' External: LB. 
+	+ CLI: kubectl. 
+		- $ kubectl create -f pod-def.yml  
+		- $ kubectl get pods 
+		- $ kubectl describe pods 
+	+ Definition file: 
+		- YAML. 
+		- Version: v1. 
+		- Kind: Pod | Deployment | Service. 
+		- Metadata: Name, Lables. 
+		- Specification: containers, ports. 
+	+ K8 on GCP overview: 
+		- Setup a Google Container Engine env. 
+		- Create definition YAML files: 
+			' Create pod definitions. 
+			' Create internal services (default type ClusterIP). 
+			' Create external service: type: LoadBalancer. 
+		- Create Pods. 
+		- Create Services. 
+		- $ kubectl create -f . 
+
 
 
 
@@ -159,6 +229,10 @@
 	+ Create a replicated service to run accross workers: 		docker service create --replicas 3 <IMAGE> 		// On manager node. 
 	+ Create a global service: 					docker service create --mode global <IMAGE> 		// On manager node. 
 	+ Increase to one more replica: 				docker service update --replicas 4 <IMAGE> 		// On manager node. 
+	+ Create an Overlay network for the cluster: 			docker network create --driver overay --subnet 10.0.9.0/24 my-overlay-netw ;;;;; docker service create --replicas 2 --network my-overlay-netw nginx 
+	+ Deploy a Swarm Cluster: 					docker stack deploy voting-app-stack --compose-file docker-stack.yml 	// Creates voting-app-stack_default network. 
+	+ List services: 						docker service ls 
+	+ Re-deploy Swarm Cluster: 					docker stack deploy voting-app-stack --compose-file docker-stack-2.yml 
 
 
 
@@ -221,3 +295,68 @@
 		networks:
 		  front-end:
 		  back-end: 
+
+
+* Stack Definition: 
+	docker-stack.yml:
+		---
+		#version "3"
+		services:
+			redis:
+				image: redis
+				deploy: 
+					replicas: 1
+					resources: 
+						limits: 
+							cpus: 0.01 
+							memory: 50M 
+			db:
+				image: postgres:9.4
+				deploy: 
+					replicas: 2
+					placement: 
+						constraints: 
+							- node.hostname == node1
+							- node.role == manager 
+
+
+* Stackfile: 
+	---
+	web-server:
+		autoredeploy: true
+		image: nginx
+		restart: always
+		target_num_containers: 3
+
+
+
+
+* Pod definition file (K8):
+	---
+	apiVersion: v1
+	kind: Pod
+	metadata:
+		name: my-nginx 
+	spec:
+		containers:
+			- name: nginx 
+			  image: nginx 
+			  ports: 
+				- containerPort: 80 
+
+* Service definition file (K8):
+	---
+	apiVersion: v1
+	kind: Service
+	metadata: 
+		name: redis
+		labels:
+			name: redis-service
+			app: demo-voting-app
+	spec:
+		ports:
+			- port: 6379
+			  targetPort: 6379 
+		selector:
+			name: redis-pod
+			app: demo-voting-app 

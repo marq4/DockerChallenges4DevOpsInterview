@@ -1,0 +1,10 @@
+Solution:
+1: $ docker swarm init 
+2: $ docker service create --name simple-web-app --replicas 3 -p 8083:8080 --env APP_COLOR=green     kodekloud/webapp-color 
+3: Open Firefox and go to: localhost:8083
+4: Try:
+    + $ docker service update simple-web-app --env-rm APP_COLOR 
+    + $ docker service update simple-web-app --env-add APP_COLOR=lime 
+    + Either it fails or the background is another crappy color. 
+    + $ docker logs 7e # Shows that there are only 6 color options, so we can't set it to a custom color. 
+5: docker service update simple-web-app --replicas 4 

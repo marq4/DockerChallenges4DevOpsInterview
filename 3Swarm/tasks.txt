@@ -1,0 +1,13 @@
+Tasks:
+1.- Initialize a single-node Swarm Cluster locally. 
+2.- Create a service "simple-web-app":
+	+ Image: kodekloud/webapp-color 
+	+ Replicas: 3 
+	+ Ports: 
+		- Host: 8083 
+		- Container: 8080 
+	+ Env var: 
+		- APP_COLOR: green 
+3.- Verify that the app is running by accessing it from a web browser. 
+4.- That green is horrible! Try to update the service to a nicer green: lime. Troubleshoot in case of problems. 
+5.- Scale the replicas to 4. 
